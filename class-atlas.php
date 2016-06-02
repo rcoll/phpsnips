@@ -51,114 +51,6 @@ if ( defined( 'WP_CLI' ) && WP_CLI ) {
 		          $google_api_client_gdrive            = null,
 		          $google_api_client_insights          = null,
 		          $google_api_client_webmasters        = null;
-		
-		/**
-		 * Make an API call to the Google Webmasters API
-		 */
-		protected function google_webmasters_api_call( $args ) {
-			$args = wp_parse_args( $args, array( 
-				'date_from' => date( 'Y-m-d', strtotime( '1 month ago' ) ), 
-				'date_to' => date( 'Y-m-d', strtotime( 'now' ) ), 
-				'dimensions' => array( 'query' ), 
-				'aggregation_type' => 'auto', 
-				'options' => array(), 
-				'limit' => false, 
-				'url' => 'http://someurl.com', 
-			));
-
-			$cache_key = md5( 'google_webmasters_api_call_' . serialize( $args ) );
-
-			$csv = wp_cache_get( $cache_key, 'atlas' );
-
-			if ( $csv ) {
-				return $csv;
-			}
-
-			$this->setup_google_service_client( 'webmasters' );
-
-			$search = new Google_Service_Webmasters_SearchAnalyticsQueryRequest;
-			$search->setStartDate( $args['date_from'] );
-			$search->setEndDate( $args['date_to'] );
-			$search->setDimensions( $args['dimensions'] );
-
-			if ( $args['limit'] ) {
-				$search->setRowLimit( absint( $limit ) );
-			}
-
-			$search->setAggregationType( $args['aggregation_type'] );
-
-			try {
-				$rows = $this->google_api_client_webmasters->searchanalytics->query( $args['url'], $search, $args['options'] )->getRows();
-			} catch ( Google_Service_Exception $e ) {
-				$this->dbug( $e );
-			}
-
-			if ( isset( $rows ) && ! empty( $rows ) ) {
-				$csv = '"Rank","Query","Clicks","Impressions","CTR","Position"' . "\r\n";
-
-				foreach ( $rows as $key => $result ) {
-					$columns = array( 
-						sanitize_text_field( $key + 1 ), 
-						sanitize_text_field( $result->keys[0] ), 
-						sanitize_text_field( $result->clicks ), 
-						sanitize_text_field( $result->impressions ),
-						sanitize_text_field( round( $result->ctr * 100, 2 ) . '%' ), 
-						sanitize_text_field( round( $result->position, 1 ) )
-					);
-
-					$csv .= '"' . implode( '","', $columns ) . '"' . "\r\n";
-				}
-
-				wp_cache_set( $cache_key, $csv, 'atlas', DAY_IN_SECONDS );
-
-				return $csv;
-			} else {
-				return false;
-			}
-		}
-
-		protected function google_insights_api_call( $args, $retrying = false ) {
-			$args = wp_parse_args( $args, array( 
-				'url' => 'http://someurl.com', 
-			));
-
-			$url = $args['url'];
-			unset( $args['url'] );
-			$response = null;
-
-			$this->setup_google_service_client( 'insights' );
-
-			try {
-				$response = $this->google_api_client_insights->pagespeedapi->runpagespeed( $url, $args );
-			} catch ( Google_IO_Exception $e ) {
-				if ( ! $retrying ) {
-					$this->dbug( 'Google_IO_Exception - retrying' );
-					$newargs = $args;
-					$newargs['url'] = $url;
-					$response = $this->google_insights_api_call( $newargs, true );
-				} else {
-					$this->dbug( 'Google_IO_Exception - failed after two tries' );
-				}
-			} catch ( Google_Service_Exception $e ) {
-				if ( ! $retrying ) {
-					$this->dbug( 'Google_Service_Exception - retrying' );
-					$newargs = $args;
-					$newargs['url'] = $url;
-					$response = $this->google_insights_api_call( $newargs, true );
-				}
-			}
-
-			return $response;
-		}
-
-		/**
-		 * Get file contents from a Google Drive Spreadsheet
-		 *
-		 * Only tested with spreadsheets, but may work for other Google Doc types as well.
-		 */
-		protected function google_drive_api_call( $args = array() ) {
-			
-		}
 
 		/**
 		 * Get the service token from the Google API
@@ -402,13 +294,253 @@ if ( defined( 'WP_CLI' ) && WP_CLI ) {
 			));
 			*/
 
-			wp_cache_set( $cache_key, $data, 'moguldata', 3600 );
+			wp_cache_set( $cache_key, $data, 'atlas', 3600 );
 
 			return $data;
 		}
 
-		protected function dbug( $message ) {
-			var_dump( $message );
+		/**
+		 * Make an API call to the Google Webmasters API
+		 */
+		protected function google_webmasters_api_call( $args ) {
+			$args = wp_parse_args( $args, array( 
+				'date_from' => date( 'Y-m-d', strtotime( '1 month ago' ) ), 
+				'date_to' => date( 'Y-m-d', strtotime( 'now' ) ), 
+				'dimensions' => array( 'query' ), 
+				'aggregation_type' => 'auto', 
+				'options' => array(), 
+				'limit' => false, 
+				'url' => 'http://someurl.com', 
+			));
+
+			$cache_key = md5( 'google_webmasters_api_call_' . serialize( $args ) );
+
+			$csv = wp_cache_get( $cache_key, 'atlas' );
+
+			if ( $csv ) {
+				return $csv;
+			}
+
+			$this->setup_google_service_client( 'webmasters' );
+
+			$search = new Google_Service_Webmasters_SearchAnalyticsQueryRequest;
+			$search->setStartDate( $args['date_from'] );
+			$search->setEndDate( $args['date_to'] );
+			$search->setDimensions( $args['dimensions'] );
+
+			if ( $args['limit'] ) {
+				$search->setRowLimit( absint( $limit ) );
+			}
+
+			$search->setAggregationType( $args['aggregation_type'] );
+
+			try {
+				$rows = $this->google_api_client_webmasters->searchanalytics->query( $args['url'], $search, $args['options'] )->getRows();
+			} catch ( Google_Service_Exception $e ) {
+				$this->dbug( $e );
+			}
+
+			if ( isset( $rows ) && ! empty( $rows ) ) {
+				$csv = '"Rank","Query","Clicks","Impressions","CTR","Position"' . "\r\n";
+
+				foreach ( $rows as $key => $result ) {
+					$columns = array( 
+						sanitize_text_field( $key + 1 ), 
+						sanitize_text_field( $result->keys[0] ), 
+						sanitize_text_field( $result->clicks ), 
+						sanitize_text_field( $result->impressions ),
+						sanitize_text_field( round( $result->ctr * 100, 2 ) . '%' ), 
+						sanitize_text_field( round( $result->position, 1 ) )
+					);
+
+					$csv .= '"' . implode( '","', $columns ) . '"' . "\r\n";
+				}
+
+				wp_cache_set( $cache_key, $csv, 'atlas', DAY_IN_SECONDS );
+
+				return $csv;
+			} else {
+				return false;
+			}
+		}
+
+		protected function google_insights_api_call( $args, $retrying = false ) {
+			$args = wp_parse_args( $args, array( 
+				'url' => 'http://someurl.com', 
+			));
+
+			$url = $args['url'];
+			unset( $args['url'] );
+			$response = null;
+
+			$this->setup_google_service_client( 'insights' );
+
+			try {
+				$response = $this->google_api_client_insights->pagespeedapi->runpagespeed( $url, $args );
+			} catch ( Google_IO_Exception $e ) {
+				if ( ! $retrying ) {
+					$this->dbug( 'Google_IO_Exception - retrying' );
+					$newargs = $args;
+					$newargs['url'] = $url;
+					$response = $this->google_insights_api_call( $newargs, true );
+				} else {
+					$this->dbug( 'Google_IO_Exception - failed after two tries' );
+				}
+			} catch ( Google_Service_Exception $e ) {
+				if ( ! $retrying ) {
+					$this->dbug( 'Google_Service_Exception - retrying' );
+					$newargs = $args;
+					$newargs['url'] = $url;
+					$response = $this->google_insights_api_call( $newargs, true );
+				}
+			}
+
+			return $response;
+		}
+
+		/**
+		 * Get file contents from a Google Drive Spreadsheet
+		 *
+		 * Only tested with spreadsheets, but may work for other Google Doc types as well.
+		 */
+		protected function google_drive_api_call( $args = array() ) {
+			$args = wp_parse_args( $args, array( 
+				'file_key' => null, 
+				'file_gid' => '0', 
+			));
+
+			if ( ! $args['file_key'] ) {
+				return false;
+			}
+
+			$this->setup_google_service_client( 'drive' );
+
+			$file = false;
+
+			try {
+				$file = $this->google_api_client_drive->files->get( $args['file_key'] );
+
+				$url = 'https://docs.google.com/spreadsheets/export?' . http_build_query( array( 
+					'id' => $args['file_key'], 
+					'exportFormat' => 'tsv', 
+					'gid' => $args['file_gid'], 
+				));
+
+				$request = new Google_Http_Requeset( $url, 'GET', null, null );
+				$httprequest = $this->google_api_client_drive->getClient()->getAuth()->authenticatedRequest( $request );
+
+				if ( 200 == $httprequest->getResponseHttpCode() ) {
+					return $httprequest->getResponseBody();
+				} else {
+					return false;
+				}
+			} catch ( Exception $e ) {
+				$this->dbug( $e );
+			}
+
+			return false;
+		}
+
+		/**
+		 * Make an API call to the Google Analytics API
+		 */
+		protected function google_analytics_api_call( $args = array() ) {
+			$args = wp_parse_args( $args, array( 
+				'profile' => '', 
+				'date_from' => date( 'Y-m-d', strtotime( 'yesterday' ) ), 
+				'date_to' => date( 'Y-m-d', strtotime( 'yesterday' ) ), 
+				'metrics' => 'ga:pageviews', 
+				'dimensions' => null, 
+				'sort' => null, 
+				'filters' => null, 
+				'max-results' => null, 
+			));
+
+			$cache_key = md5( 'google_analytics_api_call_' . serialize( $args ) );
+
+			$results = wp_cache_get( $cache_key, 'atlas' );
+
+			if ( $results ) {
+				return $results;
+			}
+
+			$extra = array();
+
+			if ( isset( $args['dimensions'] ) ) {
+				$extra['dimensions'] = $args['dimensions'];
+			}
+
+			if ( isset( $args['sort'] ) ) {
+				$extra['sort'] = $args['sort'];
+			}
+
+			if ( isset( $args['filters'] ) ) {
+				$extra['filters'] = $args['filters'];
+			}
+
+			if ( isset( $args['max-results'] ) ) {
+				$extra['max-results'] = $args['max-results'];
+			}
+
+			if ( count( $extra ) ) {
+				try {
+					$results = $this->google_api_client_analytics->data_ga->get( $args['profile'], $args['date_from'], $args['date_to'], $args['metrics'], $extra );
+
+					wp_cache_set( $cache_key, $results->getRows(), 'atlas', 3600 );
+
+					return $results->getRows();
+				} catch ( Google_Service_Exception $e ) {
+					$this->dbug( $e );
+				}
+			} else {
+				try {
+					$results = $this->google_api_client_analytics->data_ga->get( $args['profile'], $args['date_from'], $args['date_to'], $args['metrics'] );
+
+					wp_cache_set( $cache_key, $results->getRows(), 'atlas', 3600 );
+
+					return $results->getRows();
+				} catch ( Google_Service_Exception $e ) {
+					$this->dbug( $e );
+				}
+			}
+		}
+
+		/**
+		 * Get curl time data for a URL
+		 */
+		protected function get_url_performance( $url ) {
+			$c = curl_init();
+
+			curl_setopt( $c, CURLOPT_URL, $url );
+			curl_setopt( $c, CURLOPT_RETURNTRANSFER, 1 );
+			curl_setopt( $c, CURLOPT_CONNECTTIMEOUT, 5 );
+
+			$response = curl_exec( $c );
+			$info = curl_getinfo( $c );
+
+			$data = array( 
+				'time_total' => $info['total_time'], 
+				'time_namelookup' => $info['namelookup_time'], 
+				'time_connect' => $info['connect_time'], 
+				'time_pretransfer' => $info['pretransfer_time'], 
+				'time_starttransfer' => $info['starttransfer_time'], 
+				'size_download' => $info['size_download'], 
+				'speed_download' => $info['speed_download'], 
+			);
+
+			return $data;
+		}
+
+		/**
+		 * Debug output and/or logging in a variety of formats
+		 */
+		protected function dbug( $a = null, $b = null, $c = null, $d = null, $e = null, $f = null ) {
+			if ( $a ) { var_dump( $a ); }
+			if ( $b ) { var_dump( $b ); }
+			if ( $c ) { var_dump( $c ); }
+			if ( $d ) { var_dump( $d ); }
+			if ( $e ) { var_dump( $e ); }
+			if ( $f ) { var_dump( $f ); }
 		}
 
 	}
