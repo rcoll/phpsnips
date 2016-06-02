@@ -1,0 +1,20 @@
+# Get info on the ad account
+curl -i -X GET \
+ "https://graph.facebook.com/v2.6/act_123456789/insights?access_token=abcdefghijklmnopqrstuvwxyz1234567890"
+
+# Get a list of campaigns
+curl -i -X GET \
+ "https://graph.facebook.com/v2.6/act_123456789/campaigns?access_token=abcdefghijklmnopqrstuvwxyz1234567890"
+
+# Get data about a campaign
+curl -i -X GET \
+ "https://graph.facebook.com/v2.6/1234567890123456/insights?time_range={'since':'2016-05-01','until':'2016-05-01'}&access_token=abcdefghijklmnopqrstuvwxyz1234567890"
+
+# Get data about a campaign during a time period
+curl -i -X GET \
+ "https://graph.facebook.com/v2.6/1234567890123456/insights?breakdowns=impression_device&time_range=%7B%22since%22%3A%222016-04-20%22%2C%22until%22%3A%222016-04-27%22%7D&access_token=abcdefghijklmnopqrstuvwxyz1234567890"
+
+# Exchange short token for long token
+curl -i -X GET  "https://graph.facebook.com/oauth/access_token?grant_type=fb_exchange_token&client_id=1234567890123456&client_secret=abcdefg123456789&fb_exchange_token=abcdefghijklmnopqrstuvwxyz1234567890"
+
+https://graph.facebook.com/v2.6/6041039017866/insights?time_range=%7B%22since%22%3A%222016-04-20%22%2C%22until%22%3A%222016-04-27%22%7D&access_token=abcdefghijklmnopqrstuvwxyz1234567890
