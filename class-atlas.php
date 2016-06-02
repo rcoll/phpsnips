@@ -52,6 +52,14 @@ if ( defined( 'WP_CLI' ) && WP_CLI ) {
 		          $google_api_client_insights          = null,
 		          $google_api_client_webmasters        = null;
 
+		public function run_hourly_tasks() {
+
+		}
+
+		public function run_daily_tasks() {
+
+		}
+
 		/**
 		 * Get the service token from the Google API
 		 */
@@ -546,5 +554,11 @@ if ( defined( 'WP_CLI' ) && WP_CLI ) {
 	}
 
 	// Add the command to WP_CLI
-	WP_CLI::add_command( 'atlas', 'Atlas_CLI_Command' );
+	WP_CLI::add_command( 'atlas', 'Atlas_CLI_Command', array( 
+		'before_invoke' => function() {
+			require_once( 'atlas-date-functions.php' );
+			require_once( 'class-clover.php' );
+			require_once( 'vendor/autoload.php' );
+		}
+	));
 }
